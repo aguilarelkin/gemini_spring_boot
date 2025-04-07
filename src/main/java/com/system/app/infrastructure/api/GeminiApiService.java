@@ -5,11 +5,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.system.app.infrastructure.config.EnvConfig;
 import okhttp3.*;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.TimeUnit;
+
 @Service
 public class GeminiApiService {
     private final String apiKey = EnvConfig.get("API_KEY");
-    private final OkHttpClient client = new OkHttpClient();
+    private final OkHttpClient client;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public GeminiApiService() {
+        this.client = new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+                .build();
+    }
 
     public String generateText(String prompt) throws Exception {
 
@@ -25,13 +36,13 @@ public class GeminiApiService {
                 .build();
 
         try (Response response = client.newCall(request).execute()) {
+            assert response.body() != null;
             String responseBody = response.body().string();
-            System.out.println("API Response: " + responseBody);  // 🔍 Agregar este log
+            //System.out.println("API Response: " + responseBody);
 
             if (!response.isSuccessful()) {
                 throw new RuntimeException("Error en la API: " + responseBody);
             }
-
 
             JsonNode jsonResponse = objectMapper.readTree(responseBody);
             JsonNode firstCandidate = jsonResponse.get("candidates").get(0);
@@ -44,21 +55,22 @@ public class GeminiApiService {
     }
 
     public String generateImage(String prompt) throws Exception {
-         String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=" + apiKey;
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=" + apiKey;
 
-         String jsonPayload = "{ \"contents\": [ { \"parts\": [ { \"text\": \"Genera una imagen de un bosque encantado.\" } ] } ] }";
+        String jsonPayload = "{ \"contents\": [ { \"parts\": [ { \"text\": \"Genera una imagen de un bosque encantado.\" } ] } ] }";
 
 
-         RequestBody body = RequestBody.create(jsonPayload, MediaType.get("application/json"));
-         Request request = new Request.Builder()
-                 .url(url)
-                 .post(body)
-                 .addHeader("Content-Type", "application/json")
-                 .build();
+        RequestBody body = RequestBody.create(jsonPayload, MediaType.get("application/json"));
+        Request request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .addHeader("Content-Type", "application/json")
+                .build();
 
         try (Response response = client.newCall(request).execute()) {
+            assert response.body() != null;
             String responseBody = response.body().string();
-            System.out.println("API Response: " + responseBody);  // 🔍 Agregar este log
+            //System.out.println("API Response: " + responseBody);
             if (!response.isSuccessful()) {
                 throw new RuntimeException("Error en la API: " + response.body().string());
             }
